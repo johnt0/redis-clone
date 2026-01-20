@@ -1,0 +1,30 @@
+services:
+  redis-server:
+    build: .
+    command: ["./redis_server", "6379"]
+    ports:
+      - "6379:6379"
+    healthcheck:
+      # We use 'nc' (netcat) to check if port 6379 is open inside the container
+      test: ["CMD", "nc", "-z", "localhost", "6379"]
+      interval: 1s    # Check every second
+      timeout: 5s
+      retries: 10     # Try up to 10 times
+    networks:
+      - redis-net
+
+  redis-client:
+    build: .
+    # Pass 'redis-server' as the host so it finds the other container
+    command: ["./redis_client", "redis-server", "6379"]
+    stdin_open: true 
+    tty: true
+    depends_on:
+      redis-server:
+        condition: service_healthy # ENFORCEMENT: Client won't start until Server is healthy
+    networks:
+      - redis-net
+
+networks:
+  redis-net:
+    driver: bridge
